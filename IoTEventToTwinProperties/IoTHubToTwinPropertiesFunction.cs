@@ -14,6 +14,9 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System;
+using System.Data;
+using System.Linq;
+using System.Threading;
 
 namespace IoTEventToTwinProperties
 {
@@ -23,9 +26,10 @@ namespace IoTEventToTwinProperties
         private static RegistryManager _manager;
 
         [FunctionName("IoTHubToTwinPropertiesFunction")]
-        public static async Task Run(
-            [IoTHubTrigger("messages/events", Connection = "IoTHubEventHubConnectionString", ConsumerGroup = "eventtotwinfunction")]EventData message, 
-            ExecutionContext context, 
+        public static async Task RunAsync(
+            [IoTHubTrigger("messages/events", Connection = "IoTHubEventHubConnectionString", ConsumerGroup = "eventtotwinfunction")]EventData message,
+            Microsoft.Azure.WebJobs.ExecutionContext context,
+            CancellationToken token,
             ILogger log)
         {
             var config = new ConfigurationBuilder()
@@ -43,13 +47,20 @@ namespace IoTEventToTwinProperties
                 _manager = RegistryManager.CreateFromConnectionString(connectionString);
             }
 
-            var twin = await _manager.GetTwinAsync(deviceId);
+            var twin = await _manager.GetTwinAsync(deviceId, token);
 
             // merge properties
             var reported = JObject.Parse(twin.Properties.Reported.ToJson());
 
             var eventData = JObject.Parse(Encoding.UTF8.GetString(message.Body.ToArray()));
             eventData.Remove("timeStamp"); // this one always changes and we do not need it in the properties
+
+            // remove arrays, since they are not supported in reported properties
+            var arrays = eventData.Values().OfType<JArray>().Select(item => item.Path).ToList();
+            foreach (var arrayPath in arrays)
+            {
+                eventData.Remove(arrayPath);
+            }
 
             JObject updatedProps = (JObject)reported.DeepClone();
 
@@ -58,9 +69,18 @@ namespace IoTEventToTwinProperties
             if (!JToken.DeepEquals(updatedProps, reported))
             {
                 // need to update
-                twin.Properties.Reported = new TwinCollection(updatedProps.ToString());
-                await _manager.UpdateTwinAsync(deviceId, twin, twin.ETag);
-                log.LogInformation($"Digital twin for {deviceId} updated from {reported} to {updatedProps}");
+                try
+                {
+                    twin.Properties.Reported = new TwinCollection(updatedProps.ToString());
+                    await _manager.UpdateTwinAsync(deviceId, twin, twin.ETag, token);
+                    log.LogInformation($"Digital twin for {deviceId} updated from {reported} to {updatedProps}");
+                }
+                catch (Exception e)
+                {
+                    log.LogError($"Error updating digital twin of {deviceId} to {twin.ToJson()}: {e}");
+                    throw;
+                }
+                
             }
             
         }

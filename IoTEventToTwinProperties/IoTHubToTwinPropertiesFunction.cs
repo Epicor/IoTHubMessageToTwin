@@ -1,20 +1,16 @@
 using IoTHubTrigger = Microsoft.Azure.WebJobs.EventHubTriggerAttribute;
 
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.EventHubs;
 using System.Text;
-using System.Net.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Devices.Shared;
 using Microsoft.Azure.Devices;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System;
-using System.Data;
 using System.Linq;
 using System.Threading;
 using Microsoft.Azure.Devices.Client;
@@ -39,7 +35,11 @@ namespace IoTEventToTwinProperties
                 .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables()
                 .Build();
-
+            
+            if (!message.Properties.ContainsKey("UpdateTwin"))
+            {
+                return;
+            }
             var connectionString = config["IoTHubConnectionString"];
 
             var deviceId = (string)message.SystemProperties["iothub-connection-device-id"]; // standard system property

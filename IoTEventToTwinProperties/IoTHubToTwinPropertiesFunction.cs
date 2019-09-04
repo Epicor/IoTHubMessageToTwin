@@ -131,36 +131,6 @@ namespace IoTEventToTwinProperties
             return hostName.Split('.')[0];
         }
 
-
-        public static void MergeItem(this JObject original, object content)
-        {
-            if (!(content is JObject o))
-            {
-                return;
-            }
-
-            foreach (KeyValuePair<string, JToken> contentItem in o)
-            {
-                JProperty existingProperty = original.Property(contentItem.Key);
-
-                if (existingProperty == null)
-                {
-                    original.Add(contentItem.Key, contentItem.Value);
-                }
-                else if (contentItem.Value != null)
-                {
-                    if (!(existingProperty.Value is JContainer existingContainer) || existingContainer.Type != contentItem.Value.Type)
-                    {
-                        existingProperty.Value = contentItem.Value;
-                    }
-                    else
-                    {
-                        existingContainer.Merge(contentItem.Value);
-                    }
-                }
-            }
-        }
-
         private static bool IsNull(JToken token)
         {
             if (token.Type == JTokenType.Null)

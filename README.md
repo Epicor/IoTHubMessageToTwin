@@ -1,5 +1,7 @@
 # IoT Hub D2C Event to Twin Reported Properties Synchronisation
 
+This repository contains an Azure Function that simplifies synchronisation of transient and persistent state data for Azure IoT Hub devices. It is licensed under Apache License 2.0.
+
 Microsoft Azure IoT Hub supports several types of messages. Most commonly used one are 
 device-to-cloud (D2C) messages that take form of events. 
 These are transient and largely non-persistent. D2C messages are the most 

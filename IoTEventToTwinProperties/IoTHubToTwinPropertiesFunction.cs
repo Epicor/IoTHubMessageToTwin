@@ -21,7 +21,6 @@ namespace IoTEventToTwinProperties
     public static class IoTHubToTwinPropertiesFunction
     {
         private static RegistryManager _manager;
-        private static DeviceClient _client;
 
         [FunctionName("IoTHubToTwinPropertiesFunction")]
         public static async Task RunAsync(

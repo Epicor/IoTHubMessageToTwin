@@ -42,8 +42,9 @@ Access keys need to be supplied to the function once it is deployed:
 | IoTHubConnectionString | IoT Hub Connection String | HostName=HUBNAME.azure-devices.net;SharedAccessKeyName=ACCESS_POLICY;SharedAccessKey=KEY |
 | IoTHubEventHubConnectionString | Event Hub Connection String | Endpoint=sb://EVENT_HUB_ENDPOINT.servicebus.windows.net/;SharedAccessKeyName=ACCESS_POLICY;SharedAccessKey=KEY;EntityPath=HUBNAME |
 
-Load the function source code in Visual Studio and deploy to Azure as per [Microsoft instructions](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-vs#publish-to-azure). During deployment, please specify the connections strings for the relevant settings.
+Load the function source code in Visual Studio and deploy to Azure as per [Microsoft instructions](https://docs.microsoft.com/en-us/azure/azure-functions/functions-develop-vs#publish-to-azure). During deployment, please specify the connections strings for the relevant settings. This can be done by clicking the corresponding buttons on the publish dialogue:
+![Add/edit settings](./Screenshots/Deployment%20-%20settings.png)
 
-To test that the function works correctly, send IoT Event with property of **UpdateTwin**. This can be done by either defining event properties directly on the message when using DeviceClient SDK, or, if using REST API, by adding header **iot-app-UpdateTwin** (its value doesn't matter). You can follow [this](https://medium.com/@murdockcrc/adding-custom-headers-to-your-iot-hub-messages-via-http-rest-endpoint-563e29abe3be) article for instructions.
+To test that the function works correctly, send IoT Event with property of **UpdateTwin**. This can be done by either defining event properties directly on the message when using DeviceClient SDK, or, if using REST API, by adding header **iothub-app-UpdateTwin** (its value doesn't matter). You can follow [this](https://medium.com/@murdockcrc/adding-custom-headers-to-your-iot-hub-messages-via-http-rest-endpoint-563e29abe3be) article for instructions. REST API current details are available [here](https://docs.microsoft.com/en-us/rest/api/iothub/device/senddeviceevent).
 
 If everything has been setup correctly, then device twin reported properties should contain values from the D2C message.

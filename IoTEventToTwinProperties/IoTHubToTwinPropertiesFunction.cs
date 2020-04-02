@@ -39,6 +39,7 @@ namespace IoTEventToTwinProperties
             {
                 return;
             }
+
             var connectionString = config["IoTHubConnectionString"];
 
             var deviceId = (string)message.SystemProperties["iothub-connection-device-id"]; // standard system property
@@ -52,12 +53,14 @@ namespace IoTEventToTwinProperties
 
             // merge properties
             twin.Properties.Reported.ClearMetadata();
-            var reported = JObject.Parse(twin.Properties.Reported.ToJson());
+
+            var reported = CleanupJTokenForTwin(JObject.Parse(twin.Properties.Reported.ToJson()));
 
             var eventData = JObject.Parse(Encoding.UTF8.GetString(message.Body.ToArray()));
             eventData.Remove("timeStamp"); // this one always changes and we do not need it in the properties
 
-            // remove arrays, since they are not supported in reported properties
+            // remove arrays, since they are not supported in reported properties.
+            // Cleanup function above should have dealt with them, but do a second pass just in case
             var arrays = eventData.Values().OfType<JArray>().Select(item => item.Path).ToList();
             foreach (var arrayPath in arrays)
             {
@@ -97,52 +100,42 @@ namespace IoTEventToTwinProperties
 
 
 
-        /// <summary>
-        /// Gets the parameters from an IoT Hub Connection String (decrypted)
-        /// </summary>
-        /// <param name="connectionString"></param>
-        /// <returns></returns>
-        public static Dictionary<string, string> GetIoTHubConnectionParameters(string connectionString)
+        static JToken CleanupJTokenForTwin(JToken token)
         {
-            var parameters = new Dictionary<string, string>();
-            try
+            JToken result = token;
+            switch (token)
             {
-                parameters = connectionString.Split(';')
-                    .ToDictionary(p => p.Split('=')[0],
-                        p => p.Split('=')[1],
-                        StringComparer.InvariantCultureIgnoreCase);
+                case JObject jo:
+                    var props = jo.Properties().ToArray();
+                    foreach (var child in props)
+                    {
+                        var newName = FixReportedPropertyName(child.Name);
+                        jo[newName] = CleanupJTokenForTwin(child.Value);
+                        if (newName != child.Name)
+                        {
+                            jo.Remove(child.Name);
+                        }
+                    }
+                    result = jo;
+                    break;
+                case JArray ja:
+                    result = new JObject();
+                    for (int i = 0; i < ja.Count; i++)
+                    {
+                        result[(i + 1).ToString("D")] = CleanupJTokenForTwin(ja[i]);
+                    }
+                    break;
+                case JValue jv:
+                    result = jv;
+                    break;
+
             }
-            catch
-            {
-                throw new ArgumentException("Connection string is malformed.");
-            }
-            return parameters;
+            return result;
         }
 
-        public static string GetHubName(string connectionString)
+        static string FixReportedPropertyName(string name)
         {
-            var parameters = GetIoTHubConnectionParameters(connectionString);
-            if (parameters.ContainsKey("HostName") == false)
-            {
-                throw new Exception("Hostname not found in connection string.");
-            }
-            var hostName = parameters["HostName"];
-            return hostName.Split('.')[0];
-        }
-
-        private static bool IsNull(JToken token)
-        {
-            if (token.Type == JTokenType.Null)
-            {
-                return true;
-            }
-
-            if (token is JValue v && v.Value == null)
-            {
-                return true;
-            }
-
-            return false;
+            return name.Replace('.', '_').Replace('$', '_').Replace('#', '_').Replace(' ', '_');
         }
     }
 }
